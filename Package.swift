@@ -34,7 +34,16 @@ let package = Package(
             // Same reasoning as the canvas app next door: the whole interface is
             // main-thread by nature, and Swift 6's strict isolation buys nothing
             // here but ceremony.
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            swiftSettings: [.swiftLanguageMode(.v5)],
+            // On macOS 12 and older, a Safari update puts its newer WebKit in
+            // StagedFrameworks, which only an app that asks for it gets:
+            // without this, Search ran Monterey's own WebKit (Safari 15)
+            // while Safari had 17, and pages written for 17 came up blank.
+            // dyld takes a framework from there only when it is newer than
+            // the system's; on macOS 13 and later there is none, and nothing
+            // changes. Safari asks the same way.
+            linkerSettings: [.unsafeFlags(["-Xlinker", "-dyld_env", "-Xlinker",
+                                           "DYLD_VERSIONED_FRAMEWORK_PATH=/Library/Apple/System/Library/StagedFrameworks/Safari"])]
         ),
         // Test-only: keeps every window the unit tests make off the screen.
         .target(

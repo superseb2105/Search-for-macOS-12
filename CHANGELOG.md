@@ -13,7 +13,7 @@ in [ROADMAP.md](ROADMAP.md).
 
 ### Added
 
-- Search runs on macOS 12 Monterey and macOS 13 Ventura, not only macOS 14 and later. Where macOS 14 has something the older ones don't, the older ones do the nearest thing or leave the feature out: Profiles and signed-out spaces, the proxy, and the developer tools packages still need macOS 14 and aren't offered before it. The app starts with a WindowGroup on macOS 12, where SwiftUI's single Window scene isn't there. `Sources/Search/Compat.swift`. The developer tools packages are built for macOS 14 on their own (`SEARCH_DEVTOOLS=1`, build.sh).
+- Search runs on macOS 12 Monterey and macOS 13 Ventura, not only macOS 14 and later. Where macOS 14 has something the older ones don't, the older ones do the nearest thing or leave the feature out: Profiles and signed-out spaces, the proxy, and the developer tools packages still need macOS 14 and aren't offered before it. The app starts with a WindowGroup on macOS 12, where SwiftUI's single Window scene isn't there. `Sources/Search/Compat.swift`. The developer tools packages are built for macOS 14 on their own (`SEARCH_DEVTOOLS=1`, build.sh). On macOS 12, Search runs the newer WebKit a Safari update stages beside the system's, as Safari does, and tells sites the engine it really runs: Monterey's own WebKit, said to be Safari 17 because Safari was, left claude.ai and other pages blank.
 
 ### Fixed
 

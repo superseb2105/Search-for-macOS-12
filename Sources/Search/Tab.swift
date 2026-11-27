@@ -47,6 +47,14 @@ enum Web {
     static let userAgentName = "Version/\(safariVersion) Safari/605.1.15"
 
     private static var safariVersion: String {
+        // Before macOS 13, Safari's own WebKit can be a newer one than the
+        // system's, staged beside it: Safari's number is this engine's only
+        // when that staged WebKit is the one loaded (Package.swift). If not,
+        // the system's, which the fallback below says.
+        if ProcessInfo.processInfo.operatingSystemVersion.majorVersion < 13,
+           !Bundle(for: WKWebView.self).bundlePath.contains("StagedFrameworks") {
+            return "\(ProcessInfo.processInfo.operatingSystemVersion.majorVersion + 3).0"
+        }
         for path in ["/System/Cryptexes/App/System/Applications/Safari.app", "/Applications/Safari.app"] {
             if let version = Bundle(path: path)?.infoDictionary?["CFBundleShortVersionString"] as? String {
                 return version
