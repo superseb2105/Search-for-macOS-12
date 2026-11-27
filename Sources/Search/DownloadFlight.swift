@@ -215,13 +215,7 @@ private struct DownloadsEdge: View {
 
     var body: some View {
         FetchGlyph(fetches: fetches, check: true)
-            .keyframeAnimator(initialValue: CGFloat(1), trigger: browser.doorBeat) { icon, scale in
-                icon.scaleEffect(scale)
-            } keyframes: { _ in
-                let pulse = FetchDoor.pulse(reduced: Motion.reduced, light: Motion.light)
-                CubicKeyframe(pulse.peak, duration: pulse.up)
-                CubicKeyframe(1, duration: pulse.down)
-            }
+            .doorPulse(trigger: browser.doorBeat)
             .frame(width: DownloadFlight.edgeSize, height: DownloadFlight.edgeSize)
             .background(Palette.ground, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(Palette.hairline, lineWidth: 1))

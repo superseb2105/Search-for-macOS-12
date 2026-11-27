@@ -19,7 +19,7 @@ enum PaceFrames {
         var ticks: [CFTimeInterval] = []
         var offsets: [Double] = []
         var probe: () -> Double = { .nan }
-        @objc func tick(_ link: CADisplayLink) { ticks.append(link.timestamp); offsets.append(probe()) }
+        func tick(_ link: FrameTicker) { ticks.append(link.timestamp); offsets.append(probe()) }
     }
 
     static var hitNames: [String] = []
@@ -46,7 +46,7 @@ enum PaceFrames {
             }
             let observers = [wake, sleep].compactMap { $0 }
             for o in observers { CFRunLoopAddObserver(CFRunLoopGetMain(), o, .commonModes) }
-            let link = (NSScreen.main ?? NSScreen.screens[0]).displayLink(target: ticker, selector: #selector(Ticker.tick(_:)))
+            let link = FrameTicker(screen: NSScreen.main ?? NSScreen.screens[0]) { [ticker] link in ticker.tick(link) }
             // Asked for the display's full pace, as the swipe's glide asks
             // (SwipeGlide). The display can still run at 60 Hz: then every
             // gap is 16.7 ms whatever the app does, and gapMedian says so.

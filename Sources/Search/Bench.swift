@@ -1272,7 +1272,7 @@ final class Bench {
                         "ids": b.tabs.map(Bench.short),
                         "profile": Profiles.shared.profile(b.profileID).name,
                         "spaces": b.spaces.map(\.name),
-                        "stores": b.tabs.map { $0.store.identifier?.uuidString ?? "default" },
+                        "stores": b.tabs.map { $0.store.identifierCompat?.uuidString ?? "default" },
                         "pins": b.tabs.filter { $0.pin != nil }.map { $0.pin ?? "" },
                         "frame": b.window.map { NSStringFromRect($0.frame) } ?? "",
                         // Profiles in one window (OneWindow.swift): tucked
@@ -1617,10 +1617,14 @@ final class Bench {
                                   "held": PointerLock.shared.page != nil, "hint": PointerLock.shared.showing]
             // Whether this Mac lets the browser use its passkeys at all — the
             // one-time permission macOS asks a browser other than Safari for.
-            switch ASAuthorizationWebBrowserPublicKeyCredentialManager().authorizationStateForPlatformCredentials {
-            case .authorized: out["passkeyAccess"] = "authorized"
-            case .denied: out["passkeyAccess"] = "denied"
-            default: out["passkeyAccess"] = "notDetermined"
+            if #available(macOS 13.5, *) {
+                switch ASAuthorizationWebBrowserPublicKeyCredentialManager().authorizationStateForPlatformCredentials {
+                case .authorized: out["passkeyAccess"] = "authorized"
+                case .denied: out["passkeyAccess"] = "denied"
+                default: out["passkeyAccess"] = "notDetermined"
+                }
+            } else {
+                out["passkeyAccess"] = "unsupported"
             }
             out["dialogs"] = Dialogs.askedInTest
             out["asking"] = browser.asking.map { "\($0.host) \($0.wants)" + ($0.once ? " once" : "") + ($0.keeps ? "" : " unkept") } ?? ""
@@ -6058,7 +6062,7 @@ final class Bench {
                     "profiles": profiles.list.map { profile -> [String: Any] in
                         ["name": profile.name, "id": profile.id.uuidString, "home": profile.home.uuidString,
                          "spaces": Spaces.read(profile: profile.id).map(\.name),
-                         "store": Profiles.store(profile.id).identifier?.uuidString ?? "default"]
+                         "store": Profiles.store(profile.id).identifierCompat?.uuidString ?? "default"]
                     },
                     "window": profiles.profile(browser.profileID).name,
                     "spaces": browser.spaces.map(\.name),
@@ -6141,7 +6145,7 @@ final class Bench {
                 // The space's menu as it would open: section headers and spaces,
                 // with their ⌃ keys and the one ticked.
                 "menu": SpaceMenu.menu(for: browser).items.map { item -> [String: Any] in
-                    ["title": item.title, "header": item.isSectionHeader, "key": item.keyEquivalent, "on": item.state == .on]
+                    ["title": item.title, "header": { if #available(macOS 14, *) { return item.isSectionHeader } else { return !item.isEnabled && item.action == nil } }(), "key": item.keyEquivalent, "on": item.state == .on]
                 },
                 "every": browser.everySpace.map(\.name),
                 "on": browser.prefs.usesSpaces,
@@ -6210,11 +6214,12 @@ final class Bench {
                         "active": row.active.map { id in row.tabs.first { $0.id == id }.map(Bench.short) ?? "" } ?? "",
                     ] as [String: Any])
                 }),
-                "pages": Web.pages.allObjects.map { $0.configuration.websiteDataStore.identifier?.uuidString ?? "default" },
+                "pages": Web.pages.allObjects.map { $0.configuration.websiteDataStore.identifierCompat?.uuidString ?? "default" },
             ]
             // And the stores WebKit keeps by identifier, a moment later —
             // what a deleted space should have taken with it.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                guard #available(macOS 14, *) else { return answer(out.merging(["stores": [String]()]) { a, _ in a }) }
                 WKWebsiteDataStore.fetchAllDataStoreIdentifiers { ids in
                     MainActor.assumeIsolated {
                         // What is still in the stores of deleted spaces — none, if deleting emptied them.
@@ -6999,7 +7004,7 @@ final class Bench {
             // store each pin's tab signs in with.
             "everywhere": browser.tabs.filter { $0.pin != nil && $0.everywhere }.map { Bench.short($0) },
             "pinStores": Dictionary(uniqueKeysWithValues: browser.tabs.filter { $0.pin != nil }
-                .map { (Bench.short($0), $0.store.identifier?.uuidString ?? "default") }),
+                .map { (Bench.short($0), $0.store.identifierCompat?.uuidString ?? "default") }),
             // What pages of the pair asked, oldest first (see PaneQuestion).
             "questions": browser.paneQuestions.map { question in
                 ["tab": short(question.tab), "host": question.host, "message": question.message,

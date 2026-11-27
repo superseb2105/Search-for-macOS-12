@@ -43,12 +43,14 @@ Search runs on macOS 12 Monterey and later. A few things need a newer macOS, and
 |---|---|
 | Profiles, and a space signed out of the others (each needs a cookie jar of its own) | macOS 14 |
 | Settings › Privacy › Proxy | macOS 14 |
+| Sync with iCloud | macOS 14 |
+| Passkeys (passwords still work) | macOS 13.5 |
 | Developer tools packages | macOS 14 |
 | Keyboard moves among the sites on a new tab; the pointer's hover in the tab switcher | macOS 14 / 13 |
 | Translate Page | macOS 15 |
 | Chrome extensions | macOS 15.4 |
 
-Everything else (tabs, pins, spaces, Split View, the ad blocker, reading mode, passwords, themes, Sync with iCloud) works the same. `Sources/Search/Compat.swift` holds what stands in for the newer APIs.
+Everything else (tabs, pins, spaces, Split View, the ad blocker, reading mode, passwords, themes) works the same. A few small animations (the downloads button's beat, some glides) are simpler before macOS 14. `Sources/Search/Compat.swift` holds what stands in for the newer APIs.
 
 ## What it doesn't do
 

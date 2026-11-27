@@ -508,6 +508,8 @@ struct SettingsPanel: View {
         case "passkeys":
             return !prefs.passkeysPossible
                 ? "Needs an Apple entitlement this build doesn't have"
+                : Passkeys.access == .unsupported
+                ? "Needs macOS 13.5 or later"
                 : Passkeys.access == .denied
                 ? "macOS was told no: System Settings › Privacy & Security › Passkeys"
                 : item.detail

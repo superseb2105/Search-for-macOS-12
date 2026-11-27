@@ -506,3 +506,136 @@ extension WKWebsiteDataStore {
         return nil
     }
 }
+
+// MARK: - A tick each frame
+
+/// `CADisplayLink` from a view or a screen, macOS 14: a call each time the
+/// display draws. On older ones a 60 Hz timer stands in, with the same
+/// timestamps (CACurrentMediaTime). Made stopped: `add(to:forMode:)`
+/// starts it, as a display link's does, and `invalidate()` ends it.
+@MainActor
+final class FrameTicker: NSObject {
+    private(set) var timestamp: CFTimeInterval = 0
+    private let tick: (FrameTicker) -> Void
+    private var link: AnyObject?
+    private var timer: Timer?
+    private var ended = false
+
+    /// The pace asked for, where the display link can be asked.
+    var preferredFrameRateRange = CAFrameRateRange(minimum: 0, maximum: 0, preferred: 0) {
+        didSet {
+            if #available(macOS 14, *) { (link as? CADisplayLink)?.preferredFrameRateRange = preferredFrameRateRange }
+        }
+    }
+
+    init(view: NSView? = nil, screen: NSScreen? = nil, _ tick: @escaping (FrameTicker) -> Void) {
+        self.tick = tick
+        super.init()
+        if #available(macOS 14, *) {
+            if let view {
+                link = view.displayLink(target: self, selector: #selector(fired(_:)))
+            } else if let screen = screen ?? NSScreen.main ?? NSScreen.screens.first {
+                link = screen.displayLink(target: self, selector: #selector(fired(_:)))
+            }
+        }
+    }
+
+    func add(to runLoop: RunLoop, forMode mode: RunLoop.Mode) {
+        guard !ended else { return }
+        if #available(macOS 14, *), let link = link as? CADisplayLink {
+            link.add(to: runLoop, forMode: mode)
+            return
+        }
+        guard timer == nil else { return }
+        let timer = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.timestamp = CACurrentMediaTime()
+                self.tick(self)
+            }
+        }
+        runLoop.add(timer, forMode: mode)
+        self.timer = timer
+    }
+
+    func invalidate() {
+        ended = true
+        if #available(macOS 14, *) { (link as? CADisplayLink)?.invalidate() }
+        link = nil
+        timer?.invalidate()
+        timer = nil
+    }
+
+    @available(macOS 14, *)
+    @objc private func fired(_ link: CADisplayLink) {
+        timestamp = link.timestamp
+        tick(self)
+    }
+}
+
+// MARK: - Small things from macOS 13 and 14
+
+extension WKWebsiteDataStore {
+    /// `identifier`, macOS 14: nil for the default store, and always on 12
+    /// and 13, where every store is the default one.
+    var identifierCompat: UUID? {
+        if #available(macOS 14, *) { return identifier }
+        return nil
+    }
+}
+
+extension URL {
+    /// `URL(string:encodingInvalidCharacters:)`, macOS 14; `URL(string:)`,
+    /// which never encoded them, before.
+    static func strict(_ string: String) -> URL? {
+        if #available(macOS 14, *) { return URL(string: string, encodingInvalidCharacters: false) }
+        return URL(string: string)
+    }
+}
+
+extension AnyTransition {
+    /// `.push(from:)`, macOS 13; slid in from that edge and faded before.
+    static func pushCompat(from edge: Edge) -> AnyTransition {
+        if #available(macOS 13, *) { return .push(from: edge) }
+        return .asymmetric(insertion: .move(edge: edge).combined(with: .opacity),
+                           removal: .move(edge: edge.opposite).combined(with: .opacity))
+    }
+}
+
+private extension Edge {
+    var opposite: Edge {
+        switch self {
+        case .top: return .bottom
+        case .bottom: return .top
+        case .leading: return .trailing
+        case .trailing: return .leading
+        }
+    }
+}
+
+extension View {
+    /// `animation(_:body:)`, macOS 14: the animation for what `body` does
+    /// alone. Before, the same applied with `animation(_:value:)`, so it
+    /// reaches what changes with `value` beneath.
+    @ViewBuilder
+    func animationCompat<V: Equatable, Changed: View>(_ animation: Animation?, value: V,
+                                                       @ViewBuilder body: @escaping (AnyView) -> Changed) -> some View {
+        if #available(macOS 14, *) {
+            self.animation(animation) { content in body(AnyView(content)) }
+        } else {
+            body(AnyView(self)).animation(animation, value: value)
+        }
+    }
+
+    /// `textContentType(.emailAddress)`, macOS 14.
+    @ViewBuilder
+    func emailFieldCompat() -> some View {
+        if #available(macOS 14, *) { textContentType(.emailAddress) } else { self }
+    }
+}
+
+/// Keys in a `switch`: KeyEquivalent is Equatable only from macOS 14, so
+/// they are matched by their character, which every macOS can compare.
+func ~= (pattern: KeyEquivalent, value: KeyEquivalent) -> Bool {
+    pattern.character == value.character
+}

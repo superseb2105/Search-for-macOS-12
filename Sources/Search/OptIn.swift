@@ -305,7 +305,7 @@ struct OptInForm: View {
             TextField("", text: $email)
                 .textFieldStyle(.plain)
                 .foregroundStyle(Palette.ink)
-                .textContentType(.emailAddress)
+                .emailFieldCompat()
                 .disableAutocorrection(true)
                 .onSubmit(send)
                 .accessibilityLabel("Email address")

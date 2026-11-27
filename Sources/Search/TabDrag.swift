@@ -25,6 +25,7 @@ struct SplitDropZone: NSViewRepresentable {
         view.kind = kind
     }
 
+    @available(macOS 13, *)
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: Marker, context: Context) -> CGSize? {
         proposal.replacingUnspecifiedDimensions()
     }

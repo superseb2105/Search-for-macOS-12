@@ -31,7 +31,7 @@ final class WheelGlide: NSObject {
     private var target = CGVector.zero
     private var done = CGVector.zero
     private var moved = CGVector.zero
-    private var link: CADisplayLink?
+    private var link: FrameTicker?
     private var timer: Timer?
     private var last: CFTimeInterval = 0
     /// For the bench: steps sent since the last notch.
@@ -73,7 +73,7 @@ final class WheelGlide: NSObject {
             // In step with the screen; a window on none, as a hidden probe's,
             // is stepped by a timer instead.
             if view.window?.occlusionState.contains(.visible) == true {
-                let link = view.displayLink(target: self, selector: #selector(frame))
+                let link = FrameTicker(view: view) { [weak self] _ in self?.frame() }
                 link.add(to: .main, forMode: .common)
                 self.link = link
             } else {

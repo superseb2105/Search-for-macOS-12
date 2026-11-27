@@ -604,8 +604,15 @@ extension KeyCombo {
 extension View {
     /// The command's key as it stands, or none (see ShortcutStore).
     @MainActor
+    @ViewBuilder
     func shortcut(_ id: String?) -> some View {
-        keyboardShortcut(id.flatMap { ShortcutStore.shared.key(for: $0)?.swiftUI })
+        // keyboardShortcut with an optional key is macOS 12.3: without a key,
+        // the view as it is.
+        if let key = id.flatMap({ ShortcutStore.shared.key(for: $0)?.swiftUI }) {
+            keyboardShortcut(key)
+        } else {
+            self
+        }
     }
 
     /// A button's tooltip with its command's key as it stands, "Downloads

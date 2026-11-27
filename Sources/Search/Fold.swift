@@ -520,7 +520,7 @@ struct Fold: View {
                         .padding(.vertical, floating ? Metrics.cardGap : 0)
                         // Faded rather than slid under Reduce Motion with
                         // Slide the column in and out on (Browser.moveColumn).
-                        .animation(Motion.fadesColumn ? .easeInOut(duration: Motion.fade) : nil) { column in
+                        .animationCompat(Motion.fadesColumn ? .easeInOut(duration: Motion.fade) : nil, value: lightsOff) { column in
                             column.opacity(lightsOff && Motion.fadesColumn ? 0 : 1)
                         }
                         .modifier(PixelOffset(offset: CGSize(width: columnOffset, height: 0), scale: displayScale))

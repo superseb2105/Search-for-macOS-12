@@ -301,7 +301,7 @@ struct SideBar: View {
             // and of what plays in another tab, over the foot.
             // The rows' end with the foot, as it rises and goes: this inset
             // alone animated, not the rows under it, which only take it.
-            .animation(doorsFoot ? SideBar.footIn : SideBar.doorsOut) {
+            .animationCompat(doorsFoot ? SideBar.footIn : SideBar.doorsOut, value: footHeight) {
                 $0.modifier(EndInset(bottom: footHeight))
             }
             .padding(.bottom, (browser.player == nil ? 0 : rowHeight + SideBar.playerGap)

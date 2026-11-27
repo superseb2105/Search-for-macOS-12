@@ -775,7 +775,7 @@ final class Float {
         // a second on a ProMotion screen, where AppKit's window animation
         // stepped at 60 — on a critically damped spring: quick away,
         // settling into the corner without overshooting it.
-        private var gliding: CADisplayLink?
+        private var gliding: FrameTicker?
         private var glideFrom: NSPoint = .zero
         private var glideTo: NSPoint = .zero
         private var glideStart: CFTimeInterval = 0
@@ -795,7 +795,7 @@ final class Float {
                     MainActor.assumeIsolated { self?.glideStep() }
                 }
             } else if gliding == nil {
-                let link = displayLink(target: self, selector: #selector(glideStep(_:)))
+                let link = FrameTicker(view: self) { [weak self] _ in self?.glideStep() }
                 link.add(to: .main, forMode: .common)
                 gliding = link
             }
@@ -803,7 +803,6 @@ final class Float {
 
         private var ticking: Timer?
 
-        @objc private func glideStep(_ link: CADisplayLink) { glideStep() }
 
         private func glideStep() {
             guard let window else { stopGlide(); return }

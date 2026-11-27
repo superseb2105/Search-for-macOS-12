@@ -512,12 +512,22 @@ final class ICloudSync: ObservableObject {
         local: MacSide(),
         defaults: Store.settings,
         file: Store.file("icloud.json"),
-        // Never in a test run, and only in a build signed for it.
-        available: !Store.testing && ICloudSync.entitled,
-        makeEngine: { owner, state in CloudKitEngine(owner: owner, state: state) }
+        // Never in a test run, only in a build signed for it, and only on
+        // macOS 14 and later, which have CKSyncEngine.
+        available: !Store.testing && ICloudSync.entitled && ICloudSync.engineSupported,
+        makeEngine: { owner, state in
+            if #available(macOS 14, *) { return CloudKitEngine(owner: owner, state: state) }
+            return NoCloudEngine()
+        }
     )
 
     nonisolated static let containerID = "iCloud.com.officecommun.search"
+
+    /// CKSyncEngine is macOS 14's: on 12 and 13 Sync with iCloud isn't offered.
+    nonisolated static var engineSupported: Bool {
+        if #available(macOS 14, *) { return true }
+        return false
+    }
     nonisolated static let zoneName = "Search"
     nonisolated static let recordType = "Item"
     nonisolated static let onKey = "icloud.sync"
@@ -1102,6 +1112,7 @@ final class ICloudSync: ObservableObject {
     func summary(folderSyncOn: Bool, otherwise: String) -> String {
         guard available else {
             // A signed build in a test run is a build that could: it says so.
+            if !ICloudSync.engineSupported { return "Needs macOS 14 or later" }
             return Store.testing && ICloudSync.entitled ? "Off in a test run" : "Needs a build of Search signed for iCloud"
         }
         if folderSyncOn && !on { return "Turn off Sync Macs through a folder first" }
@@ -1217,9 +1228,24 @@ final class MacSide: ICloudLocal {
 
 // MARK: - CloudKit
 
+/// Never made: Sync with iCloud isn't available before macOS 14
+/// (engineSupported), so nothing asks for an engine there. Here so the
+/// app's one ICloudSync can be built on any macOS.
+@MainActor
+final class NoCloudEngine: ICloudEngine {
+    func save(_ keys: [String]) {}
+    func delete(_ keys: [String]) {}
+    func fetch() async throws {}
+    func send() async throws {}
+    func eraseZone() async throws {}
+    func account() async -> ICloudSync.Account { .unknown }
+    func close() {}
+}
+
 /// CKSyncEngine on the private database, handing everything to ICloudSync.
 /// Made only by a build signed for iCloud, with the switch on; never in a
 /// test run.
+@available(macOS 14, *)
 final class CloudKitEngine: ICloudEngine, CKSyncEngineDelegate, @unchecked Sendable {
     nonisolated static let zoneID = CKRecordZone.ID(zoneName: ICloudSync.zoneName, ownerName: CKCurrentUserDefaultName)
 

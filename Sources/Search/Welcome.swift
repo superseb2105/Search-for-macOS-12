@@ -282,10 +282,10 @@ struct WelcomePanel: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("A few things worth knowing")
+                    .kerning(0.6)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Palette.faint)
                     .textCase(.uppercase)
-                    .tracking(0.6)
                     .padding(.top, 6)
                 Key("⌘T", "A new tab. Type a place, or words to search.")
                 Key("⌘K", "Every open tab, by name.")

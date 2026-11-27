@@ -151,7 +151,7 @@ final class LensMotion: NSObject, ObservableObject {
     private var at = [Double](repeating: 0, count: 4)
     private var to = [Double](repeating: 0, count: 4)
     private var speed = [Double](repeating: 0, count: 4)
-    private var link: CADisplayLink?
+    private var link: FrameTicker?
     private var last: CFTimeInterval = 0
 
     /// How hard it is pulled, and how much of its speed it loses: three
@@ -189,12 +189,12 @@ final class LensMotion: NSObject, ObservableObject {
             return
         }
         last = 0
-        let link = view.displayLink(target: self, selector: #selector(step(_:)))
+        let link = FrameTicker(view: view) { [weak self] link in self?.step(link) }
         link.add(to: .main, forMode: .common)
         self.link = link
     }
 
-    @objc private func step(_ link: CADisplayLink) {
+    private func step(_ link: FrameTicker) {
         let now = link.timestamp
         let dt = last == 0 ? 1.0 / 120 : min(1.0 / 30, now - last)
         last = now

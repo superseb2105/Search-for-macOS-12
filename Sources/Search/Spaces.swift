@@ -921,7 +921,7 @@ struct SpaceDot: View {
                     .id(shown?.key ?? key)
                     // The way the tabs go: sideways in the column; in the bar
                     // across the top, up for the next space, down going back.
-                    .transition(.push(from: browser.prefs.sidebar
+                    .transition(.pushCompat(from: browser.prefs.sidebar
                         ? (browser.spaceStep > 0 ? .trailing : .leading)
                         : (browser.spaceStep > 0 ? .bottom : .top)))
             }

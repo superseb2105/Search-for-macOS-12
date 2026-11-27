@@ -268,6 +268,7 @@ struct WebStage: NSViewRepresentable {
 
     // The hosted page's previous bounds are not an ideal size for this layout.
     // Accept the offered room so a window can shrink around its browser chrome.
+    @available(macOS 13, *)
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: StageView, context: Context) -> CGSize? {
         guard let width = proposal.width, let height = proposal.height,
               width.isFinite, height.isFinite else { return nil }

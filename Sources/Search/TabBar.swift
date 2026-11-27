@@ -1729,6 +1729,7 @@ struct TabAddressField: NSViewRepresentable {
     /// the field was as wide as the whole address and the row cut it off:
     /// a field that never runs out of room never scrolls, so the caret went
     /// on out of sight with ← and →, and so did what was typed at the end.
+    @available(macOS 13, *)
     func sizeThatFits(_ proposal: ProposedViewSize, nsView field: NSTextField, context: Context) -> CGSize? {
         let natural = field.intrinsicContentSize
         guard let width = proposal.width, width.isFinite else { return nil }
@@ -2321,7 +2322,7 @@ struct Give: ViewModifier {
     let pressed: Bool
 
     func body(content: Content) -> some View {
-        content.animation(pressed ? Motion.quick : Motion.settle) {
+        content.animationCompat(pressed ? Motion.quick : Motion.settle, value: pressed) {
             $0.scaleEffect(pressed && !Motion.reduced ? Motion.give : 1)
         }
     }
@@ -2538,11 +2539,23 @@ struct MiddleClick: NSViewRepresentable {
 /// frame for as long as it runs — a fifth of a core, all the while a page
 /// in some tab behind was still loading. A layer's own animation is played
 /// by the render server and costs this process nothing.
-struct Ring: NSViewRepresentable {
+struct Ring: View {
+    var size: CGFloat = 10
+
+    /// Its size said by the frame too: on macOS 12, where a representable
+    /// can't be asked its size (sizeThatFits is macOS 13), it would fill
+    /// the room it is offered.
+    var body: some View {
+        RingHost(size: size).frame(width: size, height: size)
+    }
+}
+
+struct RingHost: NSViewRepresentable {
     var size: CGFloat = 10
 
     func makeNSView(context: Context) -> RingView { RingView() }
     func updateNSView(_ view: RingView, context: Context) {}
+    @available(macOS 13, *)
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: RingView, context: Context) -> CGSize? {
         CGSize(width: size, height: size)
     }

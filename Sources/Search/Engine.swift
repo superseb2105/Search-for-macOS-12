@@ -69,7 +69,7 @@ enum Engine: String, CaseIterable, Identifiable {
               let escaped = words.addingPercentEncoding(withAllowedCharacters: unreserved),
               let base = URL(string: template.replacingOccurrences(of: "%s", with: mark))?.absoluteString
         else { return nil }
-        return URL(string: base.replacingOccurrences(of: mark, with: escaped), encodingInvalidCharacters: false)
+        return URL.strict(base.replacingOccurrences(of: mark, with: escaped))
     }
 
     private static let mark = "SEARCHWORDSGOHERE"

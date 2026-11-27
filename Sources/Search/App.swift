@@ -10,6 +10,7 @@ import Combine
 /// (macOS 13 and later), a `WindowGroup` on macOS 12. The two are the same
 /// app with the same menus (SearchMenus); only the scene differs.
 @main
+@MainActor
 enum SearchMain {
     static func main() {
         if #available(macOS 13, *) {

@@ -708,6 +708,25 @@ final class Fetches: ObservableObject {
 /// come, an arrow a moment once they are in. A click opens Downloads,
 /// wherever Settings says (see Browser.showDownloads) — beside it, as the
 /// side panel's card floating there (DownloadsFloat), among them.
+extension View {
+    /// The downloads button's beat: a swell and back, keyframed (macOS 14).
+    /// Older ones don't beat.
+    @ViewBuilder
+    func doorPulse<T: Equatable>(trigger: T) -> some View {
+        if #available(macOS 14, *) {
+            keyframeAnimator(initialValue: CGFloat(1), trigger: trigger) { icon, scale in
+                icon.scaleEffect(scale)
+            } keyframes: { _ in
+                let pulse = FetchDoor.pulse(reduced: Motion.reduced, light: Motion.light)
+                CubicKeyframe(pulse.peak, duration: pulse.up)
+                CubicKeyframe(1, duration: pulse.down)
+            }
+        } else {
+            self
+        }
+    }
+}
+
 struct FetchDoor: View {
     /// How far the icon swells when a download starts, and how long it takes
     /// each way. Under Reduce Motion it goes nowhere, for the same length: a
@@ -780,13 +799,7 @@ struct FetchDoor: View {
                 // A download beginning beats it (below), and the button that
                 // a download brings in hears none: it has its scale-in alone.
                 // A download's flight beats it as it lands (DownloadFlight).
-                .keyframeAnimator(initialValue: CGFloat(1), trigger: browser.doorBeat) { icon, scale in
-                    icon.scaleEffect(scale)
-                } keyframes: { _ in
-                    let pulse = Self.pulse(reduced: Motion.reduced, light: Motion.light)
-                    CubicKeyframe(pulse.peak, duration: pulse.up)
-                    CubicKeyframe(1, duration: pulse.down)
-                }
+                .doorPulse(trigger: browser.doorBeat)
                 .frame(width: 26, height: 26)
                 .background(
                     // A door's hover (Door), on any ground: an opaque grey

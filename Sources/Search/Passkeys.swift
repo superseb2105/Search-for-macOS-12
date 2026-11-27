@@ -44,9 +44,18 @@ final class Passkeys: NSObject {
     /// Whether this Mac lets Search use its passkeys at all: a question
     /// macOS puts once to a browser other than Safari, the answer kept in
     /// System Settings › Privacy & Security.
-    static var access: ASAuthorizationWebBrowserPublicKeyCredentialManager.AuthorizationState {
-        ASAuthorizationWebBrowserPublicKeyCredentialManager().authorizationStateForPlatformCredentials
+    /// Unsupported before macOS 13.5, which has no passkeys for a browser
+    /// other than Safari to ask for.
+    static var access: Access {
+        guard #available(macOS 13.5, *) else { return .unsupported }
+        switch ASAuthorizationWebBrowserPublicKeyCredentialManager().authorizationStateForPlatformCredentials {
+        case .authorized: return .authorized
+        case .denied: return .denied
+        default: return .notDetermined
+        }
     }
+
+    enum Access { case authorized, denied, notDetermined, unsupported }
 
     /// Everyone waiting on that question while it is on screen.
     private static var waiting: [() -> Void]?
@@ -59,6 +68,7 @@ final class Passkeys: NSObject {
             waiting?.append(then)
             return
         }
+        guard #available(macOS 13.5, *) else { return then() }
         waiting = [then]
         ASAuthorizationWebBrowserPublicKeyCredentialManager().requestAuthorizationForPublicKeyCredentials { _ in
             DispatchQueue.main.async {
@@ -108,7 +118,11 @@ final class Passkeys: NSObject {
             Passkeys.changed(waiting.web)
             return
         }
-        if token == self.token { controller?.cancel() } else { withdrawn = token }
+        if token == self.token {
+            if #available(macOS 13, *) { controller?.cancel() }
+        } else {
+            withdrawn = token
+        }
     }
 
     // MARK: - offered under the field
@@ -128,7 +142,9 @@ final class Passkeys: NSObject {
         let token: String?
         let rp: String
         let origin: String
-        let clientData: ASPublicKeyCredentialClientData
+        /// An ASPublicKeyCredentialClientData (macOS 13.5), as Any so the
+        /// type can stand in a Search that runs on 12.
+        let clientData: Any
         let body: [String: Any]
         let answer: ([String: Any]) -> Void
         weak var web: WKWebView?
@@ -172,6 +188,7 @@ final class Passkeys: NSObject {
         return "\(scheme)://\(host.contains(":") ? "[\(host)]" : host)" + (url.port.map { ":\($0)" } ?? "")
     }
 
+    @available(macOS 13.5, *)
     private func wait(_ body: [String: Any], rp: String, origin: String, clientData: ASPublicKeyCredentialClientData,
                       in web: WKWebView, answer: @escaping ([String: Any]) -> Void) {
         let key = ObjectIdentifier(web)
@@ -196,7 +213,10 @@ final class Passkeys: NSObject {
                 .prefix(8)
                 .map { found in
                     Offered(id: found.credentialID, name: found.name.isEmpty ? "Passkey" : String(found.name.prefix(200)),
-                            provider: found.providerName.isEmpty ? nil : found.providerName)
+                            provider: { () -> String? in
+                                guard #available(macOS 14, *), !found.providerName.isEmpty else { return nil }
+                                return found.providerName
+                            }())
                 }
             self.settle(key, token: token, Array(offered))
         }
@@ -214,8 +234,10 @@ final class Passkeys: NSObject {
     /// One of the passkeys under the field, picked: the Mac's sheet for it
     /// alone, and the page's waiting request answered with what it gives.
     func sign(in web: WKWebView, with id: Data) {
+        guard #available(macOS 13.5, *) else { return }
         let key = ObjectIdentifier(web)
         guard FormRelay.passkeysOffered, let waiting = conditional[key], waiting.web === web,
+              let clientData = waiting.clientData as? ASPublicKeyCredentialClientData,
               waiting.offered.contains(where: { $0.id == id }),
               waiting.origin == Passkeys.origin(of: web.url),
               Store.testing || (NSApp.isActive && web.window?.isKeyWindow == true)
@@ -226,7 +248,7 @@ final class Passkeys: NSObject {
         Passkeys.last = ["kind": "get", "rp": waiting.rp, "origin": waiting.origin, "requests": 1, "conditional": true]
         Passkeys.log.notice("picked under the field for \(waiting.rp, privacy: .private)")
         if Store.testing {
-            var reply = Passkeys.rehearsal("get", rp: waiting.rp, origin: waiting.origin, challenge: waiting.clientData.challenge)
+            var reply = Passkeys.rehearsal("get", rp: waiting.rp, origin: waiting.origin, challenge: clientData.challenge)
             if waiting.body["prf"] is [String: Any] {
                 reply["prf"] = Passkeys.prfReply(enabled: nil, first: SymmetricKey(data: SHA256.hash(data: Data("rehearsal".utf8))),
                                                  second: nil, for: Passkeys.pageKey(waiting.body))
@@ -234,7 +256,7 @@ final class Passkeys: NSObject {
             return waiting.answer(reply)
         }
         let request = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: waiting.rp)
-            .createCredentialAssertionRequest(clientData: waiting.clientData)
+            .createCredentialAssertionRequest(clientData: clientData)
         request.allowedCredentials = [ASAuthorizationPlatformPublicKeyCredentialDescriptor(credentialID: id)]
         request.userVerificationPreference = Passkeys.verification(waiting.body["userVerification"])
         if #available(macOS 15.0, *) { request.prf = Passkeys.prfAssertion(waiting.body["prf"], allowed: [id]) }
@@ -246,6 +268,11 @@ final class Passkeys: NSObject {
     }
 
     func perform(_ body: [String: Any], from caller: Caller, answer: @escaping ([String: Any]) -> Void) {
+        // A browser's passkeys are macOS 13.5's: before it, the site hears
+        // what it would from a browser without them, and offers a password.
+        guard #available(macOS 13.5, *) else {
+            return refuse(answer, "NotSupportedError", "Passkeys need macOS 13.5 or later.")
+        }
         // Switched off in Settings: what reaches here came through an
         // extension's page script, which the patch runs ahead of whatever the
         // setting — the site hears no, as it would from a browser without them.
@@ -419,7 +446,7 @@ final class Passkeys: NSObject {
         if let running = controller {
             let previous = self.answer
             clear()
-            running.cancel()
+            if #available(macOS 13, *) { running.cancel() }
             previous?(Passkeys.failure("NotAllowedError", "A newer request took its place."))
         }
         let controller = ASAuthorizationController(authorizationRequests: requests)
@@ -434,6 +461,7 @@ final class Passkeys: NSObject {
 
     // MARK: - requests
 
+    @available(macOS 13.5, *)
     private func assertion(_ body: [String: Any], rp: String, clientData: ASPublicKeyCredentialClientData) -> [ASAuthorizationRequest] {
         let allowed = Passkeys.descriptors(body["allowCredentials"])
         let verification = Passkeys.verification(body["userVerification"])
@@ -455,6 +483,7 @@ final class Passkeys: NSObject {
         return requests
     }
 
+    @available(macOS 13.5, *)
     private func registration(_ body: [String: Any], rp: String, clientData: ASPublicKeyCredentialClientData) -> [ASAuthorizationRequest]? {
         guard let user = body["user"] as? [String: Any],
               let userID = Passkeys.data(user["id"]), (1...64).contains(userID.count),
@@ -784,6 +813,8 @@ extension Passkeys: ASAuthorizationControllerDelegate, ASAuthorizationController
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
         guard controller === self.controller else { return }
+        // Only a request made on macOS 13.5 or later comes back here.
+        guard #available(macOS 13.5, *) else { return }
         let credential = authorization.credential
         if let got = credential as? ASAuthorizationPublicKeyCredentialAssertion {
             let attachment = (credential as? ASAuthorizationPlatformPublicKeyCredentialAssertion)?.attachment

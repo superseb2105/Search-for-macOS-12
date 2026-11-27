@@ -1289,6 +1289,7 @@ private struct AccountsOver: NSViewRepresentable {
     let browser: Browser
     let asked: Browser.Suggesting
 
+    @available(macOS 13, *)
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: AccountHost, context: Context) -> CGSize? {
         guard let width = proposal.width, let height = proposal.height, width.isFinite, height.isFinite else { return nil }
         return CGSize(width: width, height: height)
@@ -1312,6 +1313,7 @@ private struct PairingOver: NSViewRepresentable {
     let browser: Browser
     let pairing: Browser.ApplePairing
 
+    @available(macOS 13, *)
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: PairingHost, context: Context) -> CGSize? {
         guard let width = proposal.width, let height = proposal.height, width.isFinite, height.isFinite else { return nil }
         return CGSize(width: width, height: height)

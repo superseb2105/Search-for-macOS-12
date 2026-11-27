@@ -100,7 +100,7 @@ enum ClientCertificates {
     }
 
     @MainActor static func remembered(_ site: String, in webView: WKWebView) -> String {
-        let store = webView.configuration.websiteDataStore.identifier?.uuidString ?? "default"
+        let store = webView.configuration.websiteDataStore.identifierCompat?.uuidString ?? "default"
         return "\(store) \(site)"
     }
 

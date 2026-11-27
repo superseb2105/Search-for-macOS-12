@@ -3148,7 +3148,7 @@ final class PageView: WKWebView {
     override func didAddSubview(_ subview: NSView) {
         super.didAddSubview(subview)
         guard NSStringFromClass(type(of: subview)).hasPrefix("VKCImageAnalysisOverlayView") else { return }
-        if fullscreenState != .notInFullscreen {
+        if fullscreenPhase != .notInFullscreen {
             subview.isHidden = true
             hiddenAnalysis = subview
         } else if subview === hiddenAnalysis {

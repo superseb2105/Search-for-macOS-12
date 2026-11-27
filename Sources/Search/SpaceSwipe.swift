@@ -955,7 +955,7 @@ final class SwipeGlide: NSObject {
     private let done: () -> Void
     private var began: CFTimeInterval?
     private var stepped: CFTimeInterval = 0
-    private var link: CADisplayLink?
+    private var link: FrameTicker?
     /// Steps it on when no frame comes: a window that isn't drawn — a hidden
     /// one, as the bench's — gets none, and the rows stayed out of place.
     private var watch: Timer?
@@ -993,7 +993,7 @@ final class SwipeGlide: NSObject {
             return
         }
         current = glide
-        let link = view.displayLink(target: glide, selector: #selector(frame))
+        let link = FrameTicker(view: view) { [weak glide] link in glide?.step(at: link.timestamp) }
         // As fast as the screen goes, for the moment it lasts:
         // left to choose, the system stepped it at 60 or less on a 120 Hz
         // screen, and the rows moved in visible steps.
@@ -1056,7 +1056,6 @@ final class SwipeGlide: NSObject {
         watch?.invalidate()
     }
 
-    @objc private func frame(_ link: CADisplayLink) { step(at: link.timestamp) }
 
     private func step(at now: CFTimeInterval) {
         stepped = CACurrentMediaTime()

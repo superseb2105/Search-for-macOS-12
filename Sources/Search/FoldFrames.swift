@@ -106,7 +106,7 @@ enum FoldFrames {
         var track: (() -> [String: Any])?
         var tracked: [[String: Any]] = []
         var started: CFTimeInterval = 0
-        @objc func tick(_ link: CADisplayLink) {
+        func tick(_ link: FrameTicker) {
             ticks.append((link.timestamp, column())); look()
             if var at = track?() {
                 at["t"] = ((link.timestamp - started) * 10000).rounded() / 10
@@ -189,7 +189,7 @@ enum FoldFrames {
         }
         let observers = [wake, sleep].compactMap { $0 }
         for observer in observers { CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes) }
-        let link = (NSScreen.main ?? NSScreen.screens[0]).displayLink(target: ticker, selector: #selector(Ticker.tick(_:)))
+        let link = FrameTicker(screen: NSScreen.main ?? NSScreen.screens[0]) { [ticker] link in ticker.tick(link) }
         link.add(to: .main, forMode: .common)
         let before = browser.folded
         let started = CACurrentMediaTime()
