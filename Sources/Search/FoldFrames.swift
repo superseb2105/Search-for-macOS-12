@@ -106,7 +106,7 @@ enum FoldFrames {
         var track: (() -> [String: Any])?
         var tracked: [[String: Any]] = []
         var started: CFTimeInterval = 0
-        func tick(_ link: FrameTicker) {
+        @MainActor func tick(_ link: FrameTicker) {
             ticks.append((link.timestamp, column())); look()
             if var at = track?() {
                 at["t"] = ((link.timestamp - started) * 10000).rounded() / 10

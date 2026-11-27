@@ -19,7 +19,7 @@ enum PaceFrames {
         var ticks: [CFTimeInterval] = []
         var offsets: [Double] = []
         var probe: () -> Double = { .nan }
-        func tick(_ link: FrameTicker) { ticks.append(link.timestamp); offsets.append(probe()) }
+        @MainActor func tick(_ link: FrameTicker) { ticks.append(link.timestamp); offsets.append(probe()) }
     }
 
     static var hitNames: [String] = []

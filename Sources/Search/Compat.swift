@@ -516,7 +516,7 @@ extension WKWebsiteDataStore {
 @MainActor
 final class FrameTicker: NSObject {
     private(set) var timestamp: CFTimeInterval = 0
-    private let tick: (FrameTicker) -> Void
+    private let tick: @MainActor (FrameTicker) -> Void
     private var link: AnyObject?
     private var timer: Timer?
     private var ended = false
@@ -528,7 +528,7 @@ final class FrameTicker: NSObject {
         }
     }
 
-    init(view: NSView? = nil, screen: NSScreen? = nil, _ tick: @escaping (FrameTicker) -> Void) {
+    init(view: NSView? = nil, screen: NSScreen? = nil, _ tick: @escaping @MainActor (FrameTicker) -> Void) {
         self.tick = tick
         super.init()
         if #available(macOS 14, *) {
